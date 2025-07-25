@@ -35,7 +35,7 @@ const ControlPanel = ({
           variant="secondary"
           className="toggle-button"
         >
-          {isMinimized ? '⬆️ Expand' : '⬇️ Minimize'}
+          {isMinimized ? '⬆️ Show Controls' : '⬇️ Hide Controls'}
         </Button>
       </div>
 

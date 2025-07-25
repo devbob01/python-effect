@@ -1,13 +1,12 @@
 .controls {
-  position: absolute;
-  top: 20px;
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
   right: 20px;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 20px;
-  min-width: 280px;
-  max-width: 350px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   transition: all 0.3s ease;
   z-index: 50;
@@ -15,7 +14,7 @@
 
 .controls.expanded {
   padding: 20px;
-  max-height: 80vh;
+  max-height: 60vh;
   overflow-y: auto;
 }
 
@@ -36,9 +35,9 @@
 }
 
 .toggle-button {
-  font-size: 12px !important;
-  padding: 8px 16px !important;
-  min-width: 120px;
+  font-size: 14px !important;
+  padding: 10px 20px !important;
+  min-width: 140px;
   white-space: nowrap;
   background: rgba(255, 255, 255, 0.2) !important;
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
@@ -90,7 +89,7 @@
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -98,19 +97,17 @@
   }
 }
 
-/* Mobile responsive - overlay positioning */
+/* Mobile responsive - bottom overlay positioning */
 @media (max-width: 768px) {
   .controls {
-    top: 15px;
-    right: 15px;
+    bottom: 15px;
     left: 15px;
-    min-width: unset;
-    max-width: unset;
+    right: 15px;
     border-radius: 15px;
   }
   
   .controls.expanded {
-    max-height: 70vh;
+    max-height: 50vh;
     padding: 16px;
   }
   
@@ -145,15 +142,15 @@
 
 @media (max-width: 480px) {
   .controls {
-    top: 10px;
-    right: 10px;
+    bottom: 10px;
     left: 10px;
+    right: 10px;
     border-radius: 12px;
   }
   
   .controls.expanded {
     padding: 14px;
-    max-height: 65vh;
+    max-height: 45vh;
   }
   
   .controls.minimized {

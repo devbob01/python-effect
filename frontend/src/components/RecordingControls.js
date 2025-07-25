@@ -32,44 +32,57 @@ const RecordingControls = ({
         )}
       </div>
 
-      {/* Video Actions - Only show when we have a recording */}
-      {hasRecording && (
-        <div className="video-actions" style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '8px',
-          padding: '10px',
-          background: 'rgba(76, 175, 80, 0.1)',
-          borderRadius: '10px',
-          border: '1px solid rgba(76, 175, 80, 0.3)'
-        }}>
+      {/* Video Actions - Always show section but conditionally show content */}
+      <div className="video-actions" style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '8px',
+        padding: hasRecording ? '12px' : '8px',
+        background: hasRecording ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+        borderRadius: '12px',
+        border: hasRecording ? '1px solid rgba(76, 175, 80, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+        minHeight: '60px',
+        justifyContent: 'center'
+      }}>
+        {hasRecording ? (
+          <>
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#4CAF50', 
+              textAlign: 'center',
+              marginBottom: '8px',
+              fontWeight: 'bold'
+            }}>
+              ✅ Video Ready to Share!
+            </div>
+            
+            <Button
+              onClick={onShareVideo}
+              variant="share"
+              style={{ width: '100%', marginBottom: '6px', fontSize: '14px' }}
+            >
+              📤 Share Video
+            </Button>
+            
+            <Button
+              onClick={onDownloadVideo}
+              variant="download"
+              style={{ width: '100%', fontSize: '14px' }}
+            >
+              📥 Download Video
+            </Button>
+          </>
+        ) : (
           <div style={{ 
-            fontSize: '10px', 
-            color: '#4CAF50', 
+            fontSize: '11px', 
+            color: 'rgba(255, 255, 255, 0.6)', 
             textAlign: 'center',
-            marginBottom: '5px',
-            fontWeight: 'bold'
+            fontStyle: 'italic'
           }}>
-            ✅ Video Ready!
+            {isRecording ? '🎬 Recording in progress...' : '📹 Record a video to share'}
           </div>
-          
-          <Button
-            onClick={onShareVideo}
-            variant="share"
-            style={{ width: '100%', marginBottom: '5px' }}
-          >
-            📤 Share Video
-          </Button>
-          
-          <Button
-            onClick={onDownloadVideo}
-            variant="download"
-            style={{ width: '100%' }}
-          >
-            📥 Download Video
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

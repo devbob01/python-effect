@@ -3,6 +3,7 @@
   flex-direction: column;
   min-height: 100vh;
   position: relative;
+  overflow: hidden;
 }
 
 .main-content {
@@ -64,6 +65,11 @@
 
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
+  .app-container {
+    height: 100vh;
+    overflow: hidden;
+  }
+  
   .main-content {
     height: calc(100vh - 60px); /* Smaller header on mobile */
   }
