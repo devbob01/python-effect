@@ -5,35 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Popbox Effect - Real-time Video</title>
     <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            background: #000;
-            color: #fff;
-            font-family: 'Courier New', monospace;
-            overflow: hidden;
+        * {
+            box-sizing: border-box;
         }
         
-        .container {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #000428 0%, #004e92 100%);
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            overflow-x: hidden;
             min-height: 100vh;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        .header {
+            padding: 20px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .video-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
         }
         
         .video-container {
             position: relative;
-            border: 2px solid #333;
-            border-radius: 8px;
+            border-radius: 20px;
             overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            background: #000;
+            max-width: 100%;
+            max-height: 70vh;
         }
         
         #video {
             display: block;
-            max-width: 100vw;
-            max-height: 80vh;
+            width: 100%;
+            height: auto;
             background: #222;
+            border-radius: 20px;
         }
         
         #canvas {
@@ -42,20 +90,19 @@
             left: 0;
             pointer-events: none;
             z-index: 10;
+            border-radius: 20px;
         }
         
         .controls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 20;
-            background: rgba(0, 0, 0, 0.9);
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #333;
-            min-width: 280px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 24px;
+            min-width: 320px;
             max-height: 80vh;
             overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
         
         .config-section {
@@ -99,20 +146,22 @@
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 12px;
-            height: 12px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
-            background: #0f0;
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
             cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
         
         input[type="range"]::-moz-range-thumb {
-            width: 12px;
-            height: 12px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
-            background: #0f0;
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
             cursor: pointer;
             border: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
         
         .value-display {
@@ -153,25 +202,48 @@
         }
         
         button {
-            background: #333;
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
             color: #fff;
-            border: 1px solid #666;
-            padding: 8px 16px;
-            border-radius: 4px;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 50px;
             cursor: pointer;
             font-family: inherit;
-            font-size: 12px;
-            margin-right: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            min-width: 120px;
         }
         
         button:hover {
-            background: #555;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
         }
         
         button:disabled {
-            background: #222;
-            color: #666;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .record-btn {
+            background: linear-gradient(45deg, #ff6b6b 0%, #ee5a52 100%);
+        }
+        
+        .download-btn {
+            background: linear-gradient(45deg, #4ecdc4 0%, #44a08d 100%);
+        }
+        
+        .share-btn {
+            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
         }
         
         .error {
@@ -179,24 +251,113 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: #f00;
+            color: #ff6b6b;
             text-align: center;
             font-size: 18px;
+            background: rgba(255, 107, 107, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+        
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .main-content {
+                flex-direction: column;
+                padding: 10px;
+                gap: 15px;
+            }
+            
+            .controls {
+                min-width: unset;
+                width: 100%;
+                max-height: 50vh;
+                margin-bottom: 20px;
+            }
+            
+            .video-container {
+                max-height: 60vh;
+                width: 100%;
+            }
+            
+            button {
+                padding: 14px 20px;
+                font-size: 16px;
+                min-width: 100px;
+                margin: 8px 4px;
+            }
+            
+            .config-section {
+                margin-bottom: 20px;
+            }
+            
+            .control-group {
+                margin-bottom: 15px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header {
+                padding: 15px 10px;
+            }
+            
+            .main-content {
+                padding: 10px;
+            }
+            
+            .controls {
+                padding: 20px 16px;
+                border-radius: 15px;
+            }
+            
+            button {
+                width: 100%;
+                margin: 5px 0;
+            }
+            
+            .control-label {
+                font-size: 12px;
+            }
+            
+            .config-title {
+                font-size: 12px;
+            }
+        }
+        
+        /* Touch-friendly interactions */
+        @media (hover: none) {
+            button:hover {
+                transform: none;
+            }
+            
+            button:active {
+                transform: scale(0.95);
+            }
         }
     </style>
-</head>
-<body>
-    <div class="container">
-        <div class="controls">
+ </head>
+ <body>
+     <div class="app-container">
+         <header class="header">
+             <h1>✨ Popbox Effect ✨</h1>
+         </header>
+         
+         <main class="main-content">
+             <div class="controls">
             <!-- Status and Controls -->
             <div class="config-section">
                 <div class="status" id="status">Initializing...</div>
                 <button id="startBtn">Start Camera</button>
                 <button id="stopBtn" disabled>Stop</button>
-                <div style="margin: 10px 0; border-top: 1px solid #444; padding-top: 10px;">
-                    <button id="recordBtn" disabled>🔴 Start Recording</button>
-                    <button id="stopRecordBtn" disabled style="display: none;">⏹️ Stop Recording</button>
-                    <button id="downloadBtn" disabled style="display: none;">📥 Download Video</button>
+                <div style="margin: 15px 0; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px;">
+                    <button id="recordBtn" disabled class="record-btn">🔴 Start Recording</button>
+                    <button id="stopRecordBtn" disabled class="record-btn" style="display: none;">⏹️ Stop Recording</button>
+                    <button id="downloadBtn" disabled class="download-btn" style="display: none;">📥 Download MP4</button>
+                    <button id="shareBtn" disabled class="share-btn" style="display: none;">🚀 Share Video</button>
                 </div>
                 <div class="metrics">
                     <div>Boxes: <span id="boxCount">0</span></div>
@@ -285,19 +446,23 @@
                     <div class="value-display" id="glowIntensityValue">0</div>
                 </div>
             </div>
-        </div>
-        
-        <div class="video-container">
-            <video id="video" autoplay muted playsinline></video>
-            <canvas id="canvas"></canvas>
-        </div>
-        
-        <div id="error" class="error" style="display: none;">
-            Camera access denied or not available
-        </div>
-    </div>
+                     </div>
+             
+             <div class="video-section">
+                 <div class="video-container">
+                     <video id="video" autoplay muted playsinline></video>
+                     <canvas id="canvas"></canvas>
+                 </div>
+                 
+                 <div id="error" class="error" style="display: none;">
+                     Camera access denied or not available
+                 </div>
+             </div>
+         </main>
+     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/umd/ffmpeg.js"></script>
     <script>
         class PopboxRenderer {
             constructor() {
@@ -333,10 +498,14 @@
                 this.recordingCanvas = null;
                 this.recordingContext = null;
                 this.recordingStream = null;
+                this.recordedVideoBlob = null;
+                this.convertedMP4Blob = null;
+                this.ffmpeg = null;
                 
                 this.setupSocketEvents();
                 this.setupControls();
                 this.setupConfigControls();
+                this.initFFmpeg();
                 this.updateStatus('Ready - Click Start Camera');
             }
             
@@ -365,6 +534,7 @@
                 document.getElementById('recordBtn').onclick = () => this.startRecording();
                 document.getElementById('stopRecordBtn').onclick = () => this.stopRecording();
                 document.getElementById('downloadBtn').onclick = () => this.downloadVideo();
+                document.getElementById('shareBtn').onclick = () => this.shareVideo();
             }
             
             setupConfigControls() {
@@ -726,6 +896,22 @@
                 this.lastFrameTime = now;
             }
             
+            async initFFmpeg() {
+                try {
+                    if (typeof FFmpeg !== 'undefined') {
+                        this.ffmpeg = new FFmpeg.FFmpeg();
+                        this.ffmpeg.on('log', ({ message }) => {
+                            console.log('FFmpeg:', message);
+                        });
+                        this.updateStatus('Video converter ready');
+                    } else {
+                        console.warn('FFmpeg not available, will use WebM format');
+                    }
+                } catch (error) {
+                    console.warn('FFmpeg initialization failed:', error);
+                }
+            }
+            
             setupRecordingCanvas() {
                 // Create a canvas for recording that combines video + effects
                 this.recordingCanvas = document.createElement('canvas');
@@ -821,21 +1007,39 @@
                 this.updateStatus('Recording stopped');
             }
             
-            finalizeRecording() {
+            async finalizeRecording() {
                 if (this.recordedChunks.length === 0) {
                     this.updateStatus('No recording data available');
                     return;
                 }
                 
                 // Create blob from recorded chunks
-                const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
-                this.recordedVideoBlob = blob;
+                const webmBlob = new Blob(this.recordedChunks, { type: 'video/webm' });
+                this.recordedVideoBlob = webmBlob;
                 
-                // Enable download button
+                this.updateStatus('Processing video...');
+                
+                try {
+                    // Convert WebM to MP4 using FFmpeg
+                    if (this.ffmpeg) {
+                        this.convertedMP4Blob = await this.convertToMP4(webmBlob);
+                        this.updateStatus('Video ready for download (MP4)');
+                    } else {
+                        // Fallback to WebM if FFmpeg not available
+                        this.convertedMP4Blob = webmBlob;
+                        this.updateStatus('Video ready for download (WebM)');
+                    }
+                } catch (error) {
+                    console.error('Video conversion failed:', error);
+                    this.convertedMP4Blob = webmBlob;
+                    this.updateStatus('Video ready for download (WebM fallback)');
+                }
+                
+                // Enable download and share buttons
                 document.getElementById('downloadBtn').style.display = 'inline-block';
                 document.getElementById('downloadBtn').disabled = false;
-                
-                this.updateStatus('Recording ready for download');
+                document.getElementById('shareBtn').style.display = 'inline-block';
+                document.getElementById('shareBtn').disabled = false;
                 
                 // Clean up
                 this.recordedChunks = [];
@@ -844,19 +1048,54 @@
                 }
             }
             
+            async convertToMP4(webmBlob) {
+                try {
+                    if (!this.ffmpeg.loaded) {
+                        await this.ffmpeg.load();
+                    }
+                    
+                    // Write input file
+                    const inputData = new Uint8Array(await webmBlob.arrayBuffer());
+                    await this.ffmpeg.writeFile('input.webm', inputData);
+                    
+                    // Convert to MP4
+                    await this.ffmpeg.exec([
+                        '-i', 'input.webm',
+                        '-c:v', 'libx264',
+                        '-preset', 'ultrafast',
+                        '-crf', '28',
+                        'output.mp4'
+                    ]);
+                    
+                    // Read output file
+                    const outputData = await this.ffmpeg.readFile('output.mp4');
+                    const mp4Blob = new Blob([outputData], { type: 'video/mp4' });
+                    
+                    // Clean up FFmpeg files
+                    await this.ffmpeg.deleteFile('input.webm');
+                    await this.ffmpeg.deleteFile('output.mp4');
+                    
+                    return mp4Blob;
+                } catch (error) {
+                    console.error('MP4 conversion failed:', error);
+                    throw error;
+                }
+            }
+            
             downloadVideo() {
-                if (!this.recordedVideoBlob) {
+                if (!this.convertedMP4Blob) {
                     this.updateStatus('No recording available');
                     return;
                 }
                 
                 // Create download link
-                const url = URL.createObjectURL(this.recordedVideoBlob);
+                const url = URL.createObjectURL(this.convertedMP4Blob);
                 const a = document.createElement('a');
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                const extension = this.ffmpeg ? 'mp4' : 'webm';
                 
                 a.href = url;
-                a.download = `popbox-effect-${timestamp}.webm`;
+                a.download = `popbox-effect-${timestamp}.${extension}`;
                 a.style.display = 'none';
                 
                 document.body.appendChild(a);
@@ -866,7 +1105,126 @@
                 // Clean up URL
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
                 
-                this.updateStatus('Video downloaded');
+                this.updateStatus(`Video downloaded (${extension.toUpperCase()})`);
+            }
+            
+            async shareVideo() {
+                if (!this.convertedMP4Blob) {
+                    this.updateStatus('No recording available to share');
+                    return;
+                }
+                
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                const extension = this.ffmpeg ? 'mp4' : 'webm';
+                const fileName = `popbox-effect-${timestamp}.${extension}`;
+                
+                // Check if Web Share API is supported
+                if (navigator.share && navigator.canShare) {
+                    try {
+                        const file = new File([this.convertedMP4Blob], fileName, {
+                            type: this.ffmpeg ? 'video/mp4' : 'video/webm'
+                        });
+                        
+                        if (navigator.canShare({ files: [file] })) {
+                            await navigator.share({
+                                title: 'Check out my Popbox Effect video!',
+                                text: 'I created this cool video with motion detection effects 🎬✨',
+                                files: [file]
+                            });
+                            this.updateStatus('Video shared successfully');
+                            return;
+                        }
+                    } catch (error) {
+                        console.error('Native sharing failed:', error);
+                    }
+                }
+                
+                // Fallback: Show sharing options
+                this.showShareOptions();
+            }
+            
+            showShareOptions() {
+                // Create a temporary URL for the video
+                const url = URL.createObjectURL(this.convertedMP4Blob);
+                
+                // Create share modal
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.8);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1000;
+                `;
+                
+                modal.innerHTML = `
+                    <div style="
+                        background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+                        backdrop-filter: blur(20px);
+                        border: 1px solid rgba(255,255,255,0.2);
+                        border-radius: 20px;
+                        padding: 30px;
+                        text-align: center;
+                        max-width: 400px;
+                        width: 90%;
+                    ">
+                        <h3 style="margin: 0 0 20px 0; color: #fff;">Share Your Popbox Video</h3>
+                        <p style="color: rgba(255,255,255,0.8); margin-bottom: 25px;">
+                            Your video is ready! Choose how you'd like to share it:
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <button onclick="this.copyVideoLink()" style="
+                                background: linear-gradient(45deg, #4ecdc4 0%, #44a08d 100%);
+                                color: white; border: none; padding: 12px 20px; border-radius: 25px;
+                                font-weight: 600; cursor: pointer;
+                            ">📋 Copy Video Link</button>
+                            <button onclick="this.downloadVideoAgain()" style="
+                                background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+                                color: white; border: none; padding: 12px 20px; border-radius: 25px;
+                                font-weight: 600; cursor: pointer;
+                            ">📥 Download Again</button>
+                            <button onclick="this.closeModal()" style="
+                                background: rgba(255,255,255,0.1);
+                                color: white; border: none; padding: 12px 20px; border-radius: 25px;
+                                font-weight: 600; cursor: pointer;
+                            ">✕ Close</button>
+                        </div>
+                    </div>
+                `;
+                
+                // Add click handlers
+                modal.querySelector('button[onclick="this.copyVideoLink()"]').onclick = () => {
+                    navigator.clipboard.writeText(window.location.href).then(() => {
+                        this.updateStatus('Link copied to clipboard!');
+                    });
+                };
+                
+                modal.querySelector('button[onclick="this.downloadVideoAgain()"]').onclick = () => {
+                    this.downloadVideo();
+                    document.body.removeChild(modal);
+                };
+                
+                modal.querySelector('button[onclick="this.closeModal()"]').onclick = () => {
+                    document.body.removeChild(modal);
+                    URL.revokeObjectURL(url);
+                };
+                
+                // Close on background click
+                modal.onclick = (e) => {
+                    if (e.target === modal) {
+                        document.body.removeChild(modal);
+                        URL.revokeObjectURL(url);
+                    }
+                };
+                
+                document.body.appendChild(modal);
+                
+                this.updateStatus('Share options displayed');
             }
         }
         

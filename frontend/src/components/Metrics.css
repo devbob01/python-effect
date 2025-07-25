@@ -1,0 +1,20 @@
+.metrics {
+  font-size: 11px;
+  color: #888;
+}
+
+.metrics > div {
+  margin-bottom: 2px;
+}
+
+.metric-value {
+  color: #4ecdc4;
+  font-weight: 600;
+}
+
+.recording-indicator {
+  color: #ff6b6b !important;
+  font-size: 10px;
+  margin-top: 5px;
+  animation: pulse 1s infinite;
+} 

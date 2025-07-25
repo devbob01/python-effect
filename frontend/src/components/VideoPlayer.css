@@ -1,0 +1,68 @@
+.video-section {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+.video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* This ensures the video covers the full container */
+  background: #222;
+}
+
+.canvas-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.error {
+  color: #ff6b6b;
+  text-align: center;
+  font-size: 18px;
+  background: rgba(255, 107, 107, 0.1);
+  padding: 20px;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  margin: 20px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .video-container {
+    border-radius: 0; /* Remove border radius on mobile for true full screen */
+  }
+  
+  .video {
+    border-radius: 0;
+  }
+  
+  .canvas-overlay {
+    border-radius: 0;
+  }
+} 

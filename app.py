@@ -3,10 +3,11 @@ import numpy as np
 import base64
 import json
 import random
-from flask import Flask, render_template, request
+import os
+from flask import Flask, render_template, request, send_from_directory
 from flask_socketio import SocketIO, emit
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='frontend/build/static')
 app.config['SECRET_KEY'] = 'popbox-effect-secret'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
@@ -126,7 +127,21 @@ effect = PopboxEffect()
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # Serve React build
+    if os.path.exists('frontend/build/index.html'):
+        return send_from_directory('frontend/build', 'index.html')
+    else:
+        # Fallback to original template during development
+        return render_template('index.html')
+
+@app.route('/<path:path>')
+def serve_react_assets(path):
+    # Serve React static assets
+    if os.path.exists(f'frontend/build/{path}'):
+        return send_from_directory('frontend/build', path)
+    else:
+        # Fallback to index.html for client-side routing
+        return send_from_directory('frontend/build', 'index.html')
 
 @socketio.on('video_frame')
 def handle_video_frame(data):
