@@ -3,7 +3,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "chmod +x build-frontend.sh && ./build-frontend.sh && python app.py",
+    "startCommand": "cd frontend && npm install && npm run build && cd .. && python app.py",
     "healthcheckPath": "/",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
