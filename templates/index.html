@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Popbox Effect - Real-time Video</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        
+        .container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .video-container {
+            position: relative;
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        #video {
+            display: block;
+            max-width: 100vw;
+            max-height: 80vh;
+            background: #222;
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 20;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            min-width: 280px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .config-section {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+        
+        .config-section:last-child {
+            border-bottom: none;
+        }
+        
+        .config-title {
+            color: #0f0;
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        
+        .control-group {
+            margin-bottom: 8px;
+        }
+        
+        .control-label {
+            display: block;
+            font-size: 10px;
+            color: #aaa;
+            margin-bottom: 3px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: #333;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #0f0;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #0f0;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .value-display {
+            font-size: 9px;
+            color: #666;
+            text-align: right;
+        }
+        
+        input[type="color"] {
+            width: 40px;
+            height: 25px;
+            border: 1px solid #666;
+            border-radius: 4px;
+            background: transparent;
+            cursor: pointer;
+        }
+        
+        select {
+            width: 100%;
+            background: #333;
+            color: #fff;
+            border: 1px solid #666;
+            border-radius: 4px;
+            padding: 4px;
+            font-family: inherit;
+            font-size: 11px;
+        }
+        
+        .status {
+            margin-bottom: 10px;
+            color: #0f0;
+            font-size: 12px;
+        }
+        
+        .metrics {
+            font-size: 11px;
+            color: #888;
+        }
+        
+        button {
+            background: #333;
+            color: #fff;
+            border: 1px solid #666;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background: #555;
+        }
+        
+        button:disabled {
+            background: #222;
+            color: #666;
+            cursor: not-allowed;
+        }
+        
+        .error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #f00;
+            text-align: center;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <!-- Status and Controls -->
+            <div class="config-section">
+                <div class="status" id="status">Initializing...</div>
+                <button id="startBtn">Start Camera</button>
+                <button id="stopBtn" disabled>Stop</button>
+                <div class="metrics">
+                    <div>Boxes: <span id="boxCount">0</span></div>
+                    <div>Lines: <span id="lineCount">0</span></div>
+                    <div>FPS: <span id="fps">0</span></div>
+                </div>
+            </div>
+
+            <!-- Motion Detection -->
+            <div class="config-section">
+                <div class="config-title">Motion Detection</div>
+                <div class="control-group">
+                    <label class="control-label">Sensitivity</label>
+                    <input type="range" id="sensitivity" min="10" max="100" value="30">
+                    <div class="value-display" id="sensitivityValue">30</div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Min Area</label>
+                    <input type="range" id="minArea" min="100" max="2000" value="500" step="50">
+                    <div class="value-display" id="minAreaValue">500px</div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Max Boxes</label>
+                    <input type="range" id="maxBoxes" min="1" max="20" value="10">
+                    <div class="value-display" id="maxBoxesValue">10</div>
+                </div>
+            </div>
+
+            <!-- Visual Style -->
+            <div class="config-section">
+                <div class="config-title">Visual Style</div>
+                <div class="control-group">
+                    <label class="control-label">Box Color</label>
+                    <input type="color" id="boxColor" value="#ffffff">
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Line Color</label>
+                    <input type="color" id="lineColor" value="#ffffff">
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Line Style</label>
+                    <select id="lineStyle">
+                        <option value="dashed">Dashed</option>
+                        <option value="solid">Solid</option>
+                        <option value="dotted">Dotted</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Line Opacity</label>
+                    <input type="range" id="lineOpacity" min="10" max="100" value="60">
+                    <div class="value-display" id="lineOpacityValue">60%</div>
+                </div>
+            </div>
+
+            <!-- Animation -->
+            <div class="config-section">
+                <div class="config-title">Animation</div>
+                <div class="control-group">
+                    <label class="control-label">Fade Duration</label>
+                    <input type="range" id="fadeDuration" min="10" max="100" value="30" step="5">
+                    <div class="value-display" id="fadeDurationValue">30 frames</div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Box Size</label>
+                    <input type="range" id="boxSize" min="20" max="120" value="80" step="10">
+                    <div class="value-display" id="boxSizeValue">80px</div>
+                </div>
+            </div>
+
+            <!-- Effects -->
+            <div class="config-section">
+                <div class="config-title">Effects</div>
+                <div class="control-group">
+                    <label class="control-label">Effect Mode</label>
+                    <select id="effectMode">
+                        <option value="popbox">Popbox (Default)</option>
+                        <option value="neon">Neon Glow</option>
+                        <option value="cyberpunk">Cyberpunk</option>
+                        <option value="particles">Particle Trail</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Glow Intensity</label>
+                    <input type="range" id="glowIntensity" min="0" max="20" value="0">
+                    <div class="value-display" id="glowIntensityValue">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="video-container">
+            <video id="video" autoplay muted playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        
+        <div id="error" class="error" style="display: none;">
+            Camera access denied or not available
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        class PopboxRenderer {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.socket = io();
+                this.isStreaming = false;
+                this.frameInterval = null;
+                this.lastFrameTime = 0;
+                this.fps = 0;
+                this.frameCount = 0;
+                
+                // Configuration state
+                this.config = {
+                    sensitivity: 30,
+                    minArea: 500,
+                    maxBoxes: 10,
+                    boxColor: '#ffffff',
+                    lineColor: '#ffffff',
+                    lineStyle: 'dashed',
+                    lineOpacity: 60,
+                    fadeDuration: 30,
+                    boxSize: 80,
+                    effectMode: 'popbox',
+                    glowIntensity: 0
+                };
+                
+                this.setupSocketEvents();
+                this.setupControls();
+                this.setupConfigControls();
+                this.updateStatus('Ready - Click Start Camera');
+            }
+            
+            setupSocketEvents() {
+                this.socket.on('connect', () => {
+                    this.updateStatus('Connected to server');
+                });
+                
+                this.socket.on('disconnect', () => {
+                    this.updateStatus('Disconnected from server');
+                });
+                
+                this.socket.on('popbox_data', (data) => {
+                    this.renderPopboxEffect(data);
+                    this.updateMetrics(data);
+                });
+                
+                this.socket.on('status', (data) => {
+                    console.log('Server status:', data.msg);
+                });
+            }
+            
+            setupControls() {
+                document.getElementById('startBtn').onclick = () => this.startCamera();
+                document.getElementById('stopBtn').onclick = () => this.stopCamera();
+            }
+            
+            setupConfigControls() {
+                // Motion Detection Controls
+                this.setupSlider('sensitivity', (value) => {
+                    this.config.sensitivity = parseInt(value);
+                    this.sendConfig();
+                });
+                
+                this.setupSlider('minArea', (value) => {
+                    this.config.minArea = parseInt(value);
+                    document.getElementById('minAreaValue').textContent = value + 'px';
+                    this.sendConfig();
+                });
+                
+                this.setupSlider('maxBoxes', (value) => {
+                    this.config.maxBoxes = parseInt(value);
+                    this.sendConfig();
+                });
+                
+                // Visual Style Controls
+                document.getElementById('boxColor').addEventListener('change', (e) => {
+                    this.config.boxColor = e.target.value;
+                });
+                
+                document.getElementById('lineColor').addEventListener('change', (e) => {
+                    this.config.lineColor = e.target.value;
+                });
+                
+                document.getElementById('lineStyle').addEventListener('change', (e) => {
+                    this.config.lineStyle = e.target.value;
+                });
+                
+                this.setupSlider('lineOpacity', (value) => {
+                    this.config.lineOpacity = parseInt(value);
+                    document.getElementById('lineOpacityValue').textContent = value + '%';
+                });
+                
+                // Animation Controls
+                this.setupSlider('fadeDuration', (value) => {
+                    this.config.fadeDuration = parseInt(value);
+                    document.getElementById('fadeDurationValue').textContent = value + ' frames';
+                    this.sendConfig();
+                });
+                
+                this.setupSlider('boxSize', (value) => {
+                    this.config.boxSize = parseInt(value);
+                    document.getElementById('boxSizeValue').textContent = value + 'px';
+                });
+                
+                // Effects Controls
+                document.getElementById('effectMode').addEventListener('change', (e) => {
+                    this.config.effectMode = e.target.value;
+                });
+                
+                this.setupSlider('glowIntensity', (value) => {
+                    this.config.glowIntensity = parseInt(value);
+                });
+            }
+            
+            setupSlider(id, callback) {
+                const slider = document.getElementById(id);
+                const display = document.getElementById(id + 'Value');
+                
+                slider.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    if (display && !display.textContent.includes('px') && !display.textContent.includes('%') && !display.textContent.includes('frames')) {
+                        display.textContent = value;
+                    }
+                    callback(value);
+                });
+            }
+            
+            sendConfig() {
+                if (this.socket.connected) {
+                    this.socket.emit('config_update', this.config);
+                }
+            }
+            
+            async startCamera() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { 
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            frameRate: { ideal: 30 }
+                        },
+                        audio: false
+                    });
+                    
+                    this.video.srcObject = stream;
+                    this.video.onloadedmetadata = () => {
+                        this.setupCanvas();
+                        this.startStreaming();
+                    };
+                    
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    this.updateStatus('Camera started');
+                    
+                } catch (err) {
+                    console.error('Camera access error:', err);
+                    document.getElementById('error').style.display = 'block';
+                    this.updateStatus('Camera access failed');
+                }
+            }
+            
+            stopCamera() {
+                if (this.video.srcObject) {
+                    this.video.srcObject.getTracks().forEach(track => track.stop());
+                    this.video.srcObject = null;
+                }
+                
+                this.stopStreaming();
+                this.clearCanvas();
+                
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                this.updateStatus('Camera stopped');
+            }
+            
+            setupCanvas() {
+                this.canvas.width = this.video.videoWidth;
+                this.canvas.height = this.video.videoHeight;
+                this.canvas.style.width = this.video.offsetWidth + 'px';
+                this.canvas.style.height = this.video.offsetHeight + 'px';
+            }
+            
+            startStreaming() {
+                this.isStreaming = true;
+                this.frameInterval = setInterval(() => {
+                    if (this.isStreaming && this.video.readyState === 4) {
+                        this.captureAndSendFrame();
+                        this.updateFPS();
+                    }
+                }, 100); // Send frames every 100ms (10 FPS)
+            }
+            
+            stopStreaming() {
+                this.isStreaming = false;
+                if (this.frameInterval) {
+                    clearInterval(this.frameInterval);
+                    this.frameInterval = null;
+                }
+            }
+            
+            captureAndSendFrame() {
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                tempCanvas.width = this.video.videoWidth;
+                tempCanvas.height = this.video.videoHeight;
+                
+                tempCtx.drawImage(this.video, 0, 0);
+                const frameData = tempCanvas.toDataURL('image/jpeg', 0.7);
+                
+                this.socket.emit('video_frame', { frame: frameData });
+            }
+            
+            renderPopboxEffect(data) {
+                this.clearCanvas();
+                
+                // Set canvas drawing properties
+                this.ctx.lineWidth = 2;
+                this.ctx.font = '12px Courier New';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                
+                // Apply glow effect if enabled
+                if (this.config.glowIntensity > 0) {
+                    this.ctx.shadowBlur = this.config.glowIntensity;
+                    this.ctx.shadowColor = this.config.lineColor;
+                }
+                
+                // Draw lines first (behind boxes)
+                const lineOpacity = this.config.lineOpacity / 100;
+                const lineColor = this.hexToRgb(this.config.lineColor);
+                this.ctx.strokeStyle = `rgba(${lineColor.r}, ${lineColor.g}, ${lineColor.b}, ${lineOpacity})`;
+                
+                // Set line style
+                switch(this.config.lineStyle) {
+                    case 'dashed':
+                        this.ctx.setLineDash([5, 5]);
+                        break;
+                    case 'dotted':
+                        this.ctx.setLineDash([2, 3]);
+                        break;
+                    case 'solid':
+                    default:
+                        this.ctx.setLineDash([]);
+                        break;
+                }
+                
+                data.lines.forEach(line => {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(line.x1, line.y1);
+                    this.ctx.lineTo(line.x2, line.y2);
+                    this.ctx.stroke();
+                });
+                this.ctx.setLineDash([]);
+                
+                // Draw boxes with hex codes
+                const boxColor = this.hexToRgb(this.config.boxColor);
+                
+                data.boxes.forEach((box, index) => {
+                    const alpha = Math.max(0.3, 1 - (data.frame_count - box.timestamp) / this.config.fadeDuration);
+                    const effectiveBoxSize = this.config.boxSize;
+                    
+                    // Apply different effect modes
+                    switch(this.config.effectMode) {
+                        case 'neon':
+                            this.drawNeonBox(box, alpha, effectiveBoxSize, boxColor);
+                            break;
+                        case 'cyberpunk':
+                            this.drawCyberpunkBox(box, alpha, effectiveBoxSize, boxColor);
+                            break;
+                        case 'particles':
+                            this.drawParticleBox(box, alpha, effectiveBoxSize, boxColor);
+                            break;
+                        case 'popbox':
+                        default:
+                            this.drawPopBox(box, alpha, effectiveBoxSize, boxColor);
+                            break;
+                    }
+                });
+                
+                // Reset shadow
+                this.ctx.shadowBlur = 0;
+            }
+            
+            hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                } : {r: 255, g: 255, b: 255};
+            }
+            
+            drawPopBox(box, alpha, size, color) {
+                // Box background
+                this.ctx.fillStyle = `rgba(50, 50, 50, ${alpha * 0.8})`;
+                this.ctx.fillRect(box.x - size/2, box.y - size/2, size, size);
+                
+                // Box border
+                this.ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+                this.ctx.strokeRect(box.x - size/2, box.y - size/2, size, size);
+                
+                // Hex code text
+                this.ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+                this.ctx.fillText(box.hex_code, box.x, box.y);
+                
+                // Small corner indicator
+                this.ctx.fillStyle = `rgba(0, 255, 0, ${alpha})`;
+                this.ctx.fillRect(box.x - size/2, box.y - size/2, 8, 8);
+            }
+            
+            drawNeonBox(box, alpha, size, color) {
+                // Neon glow effect
+                this.ctx.shadowBlur = 15 + this.config.glowIntensity;
+                this.ctx.shadowColor = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+                
+                // Outer glow
+                this.ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha * 0.3})`;
+                this.ctx.lineWidth = 4;
+                this.ctx.strokeRect(box.x - size/2 - 2, box.y - size/2 - 2, size + 4, size + 4);
+                
+                // Inner box
+                this.ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect(box.x - size/2, box.y - size/2, size, size);
+                
+                // Hex code with glow
+                this.ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+                this.ctx.fillText(box.hex_code, box.x, box.y);
+            }
+            
+            drawCyberpunkBox(box, alpha, size, color) {
+                // Cyberpunk style with multiple layers
+                const layers = 3;
+                for (let i = 0; i < layers; i++) {
+                    const layerAlpha = alpha * (1 - i * 0.3);
+                    const layerSize = size + i * 4;
+                    
+                    this.ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${layerAlpha * 0.4})`;
+                    this.ctx.lineWidth = 1;
+                    this.ctx.strokeRect(box.x - layerSize/2, box.y - layerSize/2, layerSize, layerSize);
+                }
+                
+                // Corner brackets
+                const cornerSize = 8;
+                this.ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+                this.ctx.lineWidth = 2;
+                
+                // Top-left corner
+                this.ctx.beginPath();
+                this.ctx.moveTo(box.x - size/2, box.y - size/2 + cornerSize);
+                this.ctx.lineTo(box.x - size/2, box.y - size/2);
+                this.ctx.lineTo(box.x - size/2 + cornerSize, box.y - size/2);
+                this.ctx.stroke();
+                
+                // Hex code
+                this.ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+                this.ctx.fillText(box.hex_code, box.x, box.y);
+            }
+            
+            drawParticleBox(box, alpha, size, color) {
+                // Central box
+                this.ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha * 0.3})`;
+                this.ctx.fillRect(box.x - size/4, box.y - size/4, size/2, size/2);
+                
+                // Particle trail effect
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i * Math.PI * 2) / 8;
+                    const distance = size/2 + Math.sin(Date.now() * 0.01 + i) * 10;
+                    const particleX = box.x + Math.cos(angle) * distance;
+                    const particleY = box.y + Math.sin(angle) * distance;
+                    
+                    this.ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha * 0.6})`;
+                    this.ctx.fillRect(particleX - 2, particleY - 2, 4, 4);
+                }
+                
+                // Hex code
+                this.ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+                this.ctx.fillText(box.hex_code, box.x, box.y);
+            }
+            
+            clearCanvas() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+            
+            updateStatus(message) {
+                document.getElementById('status').textContent = message;
+            }
+            
+            updateMetrics(data) {
+                document.getElementById('boxCount').textContent = data.boxes.length;
+                document.getElementById('lineCount').textContent = data.lines.length;
+            }
+            
+            updateFPS() {
+                const now = performance.now();
+                if (this.lastFrameTime) {
+                    const delta = now - this.lastFrameTime;
+                    this.fps = Math.round(1000 / delta);
+                    document.getElementById('fps').textContent = this.fps;
+                }
+                this.lastFrameTime = now;
+            }
+        }
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            new PopboxRenderer();
+        });
+    </script>
+</body>
+</html> 
