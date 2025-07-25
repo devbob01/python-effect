@@ -11,6 +11,10 @@ A Python web application that creates a synchronized "popbox effect" for real-ti
 - ⚡ WebSocket-based real-time communication
 - 🎨 Modern dark UI with live metrics
 - 📱 Responsive design for different screen sizes
+- 🎬 **Video recording with effects** - Record your camera feed with popbox effects
+- 📥 **Download recorded videos** - Save your recordings as WebM files
+- 🎛️ **Live configuration controls** - Adjust effects in real-time
+- 🌟 **Multiple effect modes** - Popbox, Neon, Cyberpunk, Particle trails
 
 ## Prerequisites
 
@@ -47,6 +51,10 @@ A Python web application that creates a synchronized "popbox effect" for real-ti
 4. **Click "Start Camera"** to begin the popbox effect
 
 5. **Move around** in front of the camera to see motion detection boxes appear with hex codes and connecting lines
+
+6. **Record videos** by clicking "🔴 Start Recording" 
+
+7. **Download your recordings** by clicking "📥 Download Video" after stopping
 
 ## How It Works
 
