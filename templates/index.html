@@ -193,10 +193,16 @@
                 <div class="status" id="status">Initializing...</div>
                 <button id="startBtn">Start Camera</button>
                 <button id="stopBtn" disabled>Stop</button>
+                <div style="margin: 10px 0; border-top: 1px solid #444; padding-top: 10px;">
+                    <button id="recordBtn" disabled>🔴 Start Recording</button>
+                    <button id="stopRecordBtn" disabled style="display: none;">⏹️ Stop Recording</button>
+                    <button id="downloadBtn" disabled style="display: none;">📥 Download Video</button>
+                </div>
                 <div class="metrics">
                     <div>Boxes: <span id="boxCount">0</span></div>
                     <div>Lines: <span id="lineCount">0</span></div>
                     <div>FPS: <span id="fps">0</span></div>
+                    <div id="recordingStatus" style="color: #f00; font-size: 10px; display: none;">🔴 Recording...</div>
                 </div>
             </div>
 
@@ -320,6 +326,14 @@
                     glowIntensity: 0
                 };
                 
+                // Recording state
+                this.isRecording = false;
+                this.mediaRecorder = null;
+                this.recordedChunks = [];
+                this.recordingCanvas = null;
+                this.recordingContext = null;
+                this.recordingStream = null;
+                
                 this.setupSocketEvents();
                 this.setupControls();
                 this.setupConfigControls();
@@ -348,6 +362,9 @@
             setupControls() {
                 document.getElementById('startBtn').onclick = () => this.startCamera();
                 document.getElementById('stopBtn').onclick = () => this.stopCamera();
+                document.getElementById('recordBtn').onclick = () => this.startRecording();
+                document.getElementById('stopRecordBtn').onclick = () => this.stopRecording();
+                document.getElementById('downloadBtn').onclick = () => this.downloadVideo();
             }
             
             setupConfigControls() {
@@ -446,6 +463,7 @@
                     
                     document.getElementById('startBtn').disabled = true;
                     document.getElementById('stopBtn').disabled = false;
+                    document.getElementById('recordBtn').disabled = false;
                     this.updateStatus('Camera started');
                     
                 } catch (err) {
@@ -464,8 +482,13 @@
                 this.stopStreaming();
                 this.clearCanvas();
                 
+                if (this.isRecording) {
+                    this.stopRecording();
+                }
+                
                 document.getElementById('startBtn').disabled = false;
                 document.getElementById('stopBtn').disabled = true;
+                document.getElementById('recordBtn').disabled = true;
                 this.updateStatus('Camera stopped');
             }
             
@@ -576,6 +599,11 @@
                 
                 // Reset shadow
                 this.ctx.shadowBlur = 0;
+                
+                // Update recording frame if recording
+                if (this.isRecording) {
+                    this.updateRecordingFrame();
+                }
             }
             
             hexToRgb(hex) {
@@ -696,6 +724,149 @@
                     document.getElementById('fps').textContent = this.fps;
                 }
                 this.lastFrameTime = now;
+            }
+            
+            setupRecordingCanvas() {
+                // Create a canvas for recording that combines video + effects
+                this.recordingCanvas = document.createElement('canvas');
+                this.recordingCanvas.width = this.video.videoWidth;
+                this.recordingCanvas.height = this.video.videoHeight;
+                this.recordingContext = this.recordingCanvas.getContext('2d');
+            }
+            
+            updateRecordingFrame() {
+                if (!this.isRecording || !this.recordingCanvas) return;
+                
+                // Draw video frame
+                this.recordingContext.drawImage(
+                    this.video, 
+                    0, 0, 
+                    this.recordingCanvas.width, 
+                    this.recordingCanvas.height
+                );
+                
+                // Draw effects overlay
+                this.recordingContext.drawImage(
+                    this.canvas,
+                    0, 0,
+                    this.recordingCanvas.width,
+                    this.recordingCanvas.height
+                );
+            }
+            
+            startRecording() {
+                if (!this.video.srcObject || this.isRecording) return;
+                
+                try {
+                    this.setupRecordingCanvas();
+                    
+                    // Get recording stream from canvas
+                    this.recordingStream = this.recordingCanvas.captureStream(30); // 30 FPS
+                    
+                    // Setup MediaRecorder
+                    this.mediaRecorder = new MediaRecorder(this.recordingStream, {
+                        mimeType: 'video/webm;codecs=vp9'
+                    });
+                    
+                    this.recordedChunks = [];
+                    
+                    this.mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            this.recordedChunks.push(event.data);
+                        }
+                    };
+                    
+                    this.mediaRecorder.onstop = () => {
+                        this.finalizeRecording();
+                    };
+                    
+                    // Start recording
+                    this.mediaRecorder.start(100); // Collect data every 100ms
+                    this.isRecording = true;
+                    
+                    // Update UI
+                    document.getElementById('recordBtn').style.display = 'none';
+                    document.getElementById('stopRecordBtn').style.display = 'inline-block';
+                    document.getElementById('recordingStatus').style.display = 'block';
+                    
+                    // Start recording animation loop
+                    this.recordingAnimationLoop();
+                    
+                    this.updateStatus('Recording started');
+                    
+                } catch (error) {
+                    console.error('Failed to start recording:', error);
+                    this.updateStatus('Recording failed to start');
+                }
+            }
+            
+            recordingAnimationLoop() {
+                if (this.isRecording) {
+                    this.updateRecordingFrame();
+                    requestAnimationFrame(() => this.recordingAnimationLoop());
+                }
+            }
+            
+            stopRecording() {
+                if (!this.isRecording || !this.mediaRecorder) return;
+                
+                this.isRecording = false;
+                this.mediaRecorder.stop();
+                
+                // Update UI
+                document.getElementById('recordBtn').style.display = 'inline-block';
+                document.getElementById('stopRecordBtn').style.display = 'none';
+                document.getElementById('recordingStatus').style.display = 'none';
+                
+                this.updateStatus('Recording stopped');
+            }
+            
+            finalizeRecording() {
+                if (this.recordedChunks.length === 0) {
+                    this.updateStatus('No recording data available');
+                    return;
+                }
+                
+                // Create blob from recorded chunks
+                const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+                this.recordedVideoBlob = blob;
+                
+                // Enable download button
+                document.getElementById('downloadBtn').style.display = 'inline-block';
+                document.getElementById('downloadBtn').disabled = false;
+                
+                this.updateStatus('Recording ready for download');
+                
+                // Clean up
+                this.recordedChunks = [];
+                if (this.recordingStream) {
+                    this.recordingStream.getTracks().forEach(track => track.stop());
+                }
+            }
+            
+            downloadVideo() {
+                if (!this.recordedVideoBlob) {
+                    this.updateStatus('No recording available');
+                    return;
+                }
+                
+                // Create download link
+                const url = URL.createObjectURL(this.recordedVideoBlob);
+                const a = document.createElement('a');
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                
+                a.href = url;
+                a.download = `popbox-effect-${timestamp}.webm`;
+                a.style.display = 'none';
+                
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                // Clean up URL
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                
+                this.updateStatus('Video downloaded');
             }
         }
         
