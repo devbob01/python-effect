@@ -21,7 +21,7 @@ const ControlPanel = ({
   onShareVideo,
   onConfigChange
 }) => {
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true); // Start minimized for better UX
 
   const toggleMinimized = () => {
     setIsMinimized(!isMinimized);
@@ -29,6 +29,7 @@ const ControlPanel = ({
 
   return (
     <div className={`controls ${isMinimized ? 'minimized' : 'expanded'}`}>
+      {/* Always visible toggle button */}
       <div className="controls-header">
         <Button
           onClick={toggleMinimized}
@@ -39,6 +40,7 @@ const ControlPanel = ({
         </Button>
       </div>
 
+      {/* Expandable controls content */}
       {!isMinimized && (
         <div className="controls-content">
           <div className="config-section">

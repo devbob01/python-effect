@@ -19,7 +19,31 @@ class PopboxEffect:
         self.max_boxes = 10
         self.frame_count = 0
         self.fade_duration = 30
-        self.background_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
+        self.confidence_threshold = 0.5
+        
+        # Initialize object detection
+        self.setup_object_detection()
+        
+    def setup_object_detection(self):
+        """Setup lightweight object detection using OpenCV cascades and motion analysis"""
+        try:
+            # Initialize HOG descriptor for person detection
+            self.hog = cv2.HOGDescriptor()
+            self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+            
+            # Face detection cascade
+            face_cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+            self.face_cascade = cv2.CascadeClassifier(face_cascade_path)
+            
+            # Background subtractor for motion detection
+            self.background_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
+            
+            print("✅ Lightweight object detection loaded successfully!")
+            
+        except Exception as e:
+            print(f"⚠️ Could not load object detection: {e}")
+            print("🔄 Falling back to simple motion detection...")
+            self.background_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
         
     def update_config(self, config):
         """Update effect configuration from frontend"""
@@ -27,42 +51,102 @@ class PopboxEffect:
         self.min_area = config.get('minArea', 500)
         self.max_boxes = config.get('maxBoxes', 10)
         self.fade_duration = config.get('fadeDuration', 30)
+        self.confidence_threshold = config.get('confidence', 0.5)
         
     def generate_hex_code(self):
         """Generate random hex code for boxes"""
         return ''.join([random.choice('0123456789abcdef') for _ in range(6)])
     
-    def detect_motion_points(self, frame):
-        """Detect motion points in the frame and return box coordinates"""
-        # Apply background subtraction
-        fg_mask = self.background_subtractor.apply(frame)
+    def detect_objects(self, frame):
+        """Detect objects using lightweight OpenCV methods"""
+        height, width = frame.shape[:2]
+        detected_objects = []
         
-        # Morphological operations to clean up the mask
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-        fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, kernel)
-        
-        # Find contours
-        contours, _ = cv2.findContours(fg_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        motion_points = []
-        for contour in contours:
-            area = cv2.contourArea(contour)
-            if area > self.min_area:
-                # Get bounding box
-                x, y, w, h = cv2.boundingRect(contour)
-                center_x = x + w // 2
-                center_y = y + h // 2
-                
-                motion_points.append({
-                    'x': center_x,
-                    'y': center_y,
-                    'width': min(w, 80),
-                    'height': min(h, 80),
-                    'hex_code': self.generate_hex_code(),
-                    'timestamp': self.frame_count
-                })
-        
-        return motion_points
+        try:
+            # 1. Detect people using HOG
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            people, weights = self.hog.detectMultiScale(gray, winStride=(8,8), padding=(32,32), scale=1.05)
+            
+            for (x, y, w, h) in people:
+                if w * h > self.min_area:  # Filter small detections
+                    detected_objects.append({
+                        'x': x + w // 2,
+                        'y': y + h // 2,
+                        'width': min(w, 120),
+                        'height': min(h, 120),
+                        'hex_code': self.generate_hex_code(),
+                        'timestamp': self.frame_count,
+                        'object_type': 'person',
+                        'confidence': 0.8
+                    })
+            
+            # 2. Detect faces
+            faces = self.face_cascade.detectMultiScale(gray, 1.1, 4)
+            for (x, y, w, h) in faces:
+                # Only add if not already covered by person detection
+                overlap = False
+                for obj in detected_objects:
+                    if (abs(obj['x'] - (x + w//2)) < 60 and abs(obj['y'] - (y + h//2)) < 60):
+                        overlap = True
+                        break
+                        
+                if not overlap and w * h > 1000:  # Minimum face size
+                    detected_objects.append({
+                        'x': x + w // 2,
+                        'y': y + h // 2,
+                        'width': min(w + 40, 100),  # Add padding around face
+                        'height': min(h + 40, 100),
+                        'hex_code': self.generate_hex_code(),
+                        'timestamp': self.frame_count,
+                        'object_type': 'face',
+                        'confidence': 0.7
+                    })
+            
+            # 3. Detect motion for other objects
+            fg_mask = self.background_subtractor.apply(frame)
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+            fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, kernel)
+            
+            contours, _ = cv2.findContours(fg_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            for contour in contours:
+                area = cv2.contourArea(contour)
+                if area > self.min_area:
+                    x, y, w, h = cv2.boundingRect(contour)
+                    center_x, center_y = x + w // 2, y + h // 2
+                    
+                    # Check if this motion is not already covered by person/face detection
+                    overlap = False
+                    for obj in detected_objects:
+                        if (abs(obj['x'] - center_x) < 80 and abs(obj['y'] - center_y) < 80):
+                            overlap = True
+                            break
+                    
+                    if not overlap:
+                        # Analyze the region to determine if it's likely an object
+                        roi = frame[y:y+h, x:x+w]
+                        if roi.size > 0:
+                            # Simple object classification based on color variance and shape
+                            color_variance = np.var(roi)
+                            aspect_ratio = w / h if h > 0 else 1
+                            
+                            # Higher variance and reasonable aspect ratio suggest an object
+                            if color_variance > 300 and 0.3 < aspect_ratio < 3.0:
+                                detected_objects.append({
+                                    'x': center_x,
+                                    'y': center_y,
+                                    'width': min(w, 100),
+                                    'height': min(h, 100),
+                                    'hex_code': self.generate_hex_code(),
+                                    'timestamp': self.frame_count,
+                                    'object_type': 'object',
+                                    'confidence': 0.6
+                                })
+            
+        except Exception as e:
+            print(f"Detection error: {e}")
+            
+        return detected_objects
     
     def update_boxes(self, new_points):
         """Update the list of active boxes"""
@@ -103,11 +187,11 @@ class PopboxEffect:
             
             self.frame_count += 1
             
-            # Detect motion points
-            motion_points = self.detect_motion_points(frame)
+            # Detect objects (people, faces, objects)
+            detected_objects = self.detect_objects(frame)
             
             # Update boxes
-            self.update_boxes(motion_points)
+            self.update_boxes(detected_objects)
             
             # Generate lines
             lines = self.generate_lines()
@@ -115,7 +199,8 @@ class PopboxEffect:
             return {
                 'boxes': self.boxes,
                 'lines': lines,
-                'frame_count': self.frame_count
+                'frame_count': self.frame_count,
+                'detected_count': len(detected_objects)
             }
             
         except Exception as e:
