@@ -220,6 +220,11 @@ def index():
         # Fallback to original template during development
         return render_template('index.html')
 
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Railway"""
+    return {'status': 'healthy', 'message': 'Popbox Effect server is running'}, 200
+
 @app.route('/<path:path>')
 def serve_react_assets(path):
     # Serve React static assets
@@ -254,7 +259,8 @@ def handle_disconnect():
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 8080))
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+    print(f"🚀 Starting Popbox Effect server on port {port}")
+    socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
 
 # For gunicorn
 import os
