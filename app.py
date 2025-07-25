@@ -153,4 +153,10 @@ def handle_disconnect():
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 8080))
-    socketio.run(app, host='0.0.0.0', port=port, debug=False) 
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+
+# For gunicorn
+import os
+if os.environ.get('RAILWAY_ENVIRONMENT'):
+    # Production configuration for Railway
+    app.config['DEBUG'] = False 
