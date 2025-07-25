@@ -70,14 +70,14 @@ class PopboxEffect:
             for (x, y, w, h) in people:
                 if w * h > self.min_area:  # Filter small detections
                     detected_objects.append({
-                        'x': x + w // 2,
-                        'y': y + h // 2,
-                        'width': min(w, 120),
-                        'height': min(h, 120),
+                        'x': int(x + w // 2),  # Convert to Python int
+                        'y': int(y + h // 2),
+                        'width': int(min(w, 120)),
+                        'height': int(min(h, 120)),
                         'hex_code': self.generate_hex_code(),
-                        'timestamp': self.frame_count,
+                        'timestamp': int(self.frame_count),
                         'object_type': 'person',
-                        'confidence': 0.8
+                        'confidence': float(0.8)  # Convert to Python float
                     })
             
             # 2. Detect faces
@@ -92,14 +92,14 @@ class PopboxEffect:
                         
                 if not overlap and w * h > 1000:  # Minimum face size
                     detected_objects.append({
-                        'x': x + w // 2,
-                        'y': y + h // 2,
-                        'width': min(w + 40, 100),  # Add padding around face
-                        'height': min(h + 40, 100),
+                        'x': int(x + w // 2),
+                        'y': int(y + h // 2),
+                        'width': int(min(w + 40, 100)),  # Add padding around face
+                        'height': int(min(h + 40, 100)),
                         'hex_code': self.generate_hex_code(),
-                        'timestamp': self.frame_count,
+                        'timestamp': int(self.frame_count),
                         'object_type': 'face',
-                        'confidence': 0.7
+                        'confidence': float(0.7)
                     })
             
             # 3. Detect motion for other objects
@@ -133,14 +133,14 @@ class PopboxEffect:
                             # Higher variance and reasonable aspect ratio suggest an object
                             if color_variance > 300 and 0.3 < aspect_ratio < 3.0:
                                 detected_objects.append({
-                                    'x': center_x,
-                                    'y': center_y,
-                                    'width': min(w, 100),
-                                    'height': min(h, 100),
+                                    'x': int(center_x),
+                                    'y': int(center_y),
+                                    'width': int(min(w, 100)),
+                                    'height': int(min(h, 100)),
                                     'hex_code': self.generate_hex_code(),
-                                    'timestamp': self.frame_count,
+                                    'timestamp': int(self.frame_count),
                                     'object_type': 'object',
-                                    'confidence': 0.6
+                                    'confidence': float(0.6)
                                 })
             
         except Exception as e:
@@ -167,10 +167,10 @@ class PopboxEffect:
         for i, box1 in enumerate(self.boxes):
             for j, box2 in enumerate(self.boxes[i+1:], i+1):
                 lines.append({
-                    'x1': box1['x'],
-                    'y1': box1['y'],
-                    'x2': box2['x'],
-                    'y2': box2['y']
+                    'x1': int(box1['x']),  # Ensure all values are Python int
+                    'y1': int(box1['y']),
+                    'x2': int(box2['x']),
+                    'y2': int(box2['y'])
                 })
         return lines
     
@@ -196,11 +196,12 @@ class PopboxEffect:
             # Generate lines
             lines = self.generate_lines()
             
+            # Ensure all data is JSON serializable
             return {
                 'boxes': self.boxes,
                 'lines': lines,
-                'frame_count': self.frame_count,
-                'detected_count': len(detected_objects)
+                'frame_count': int(self.frame_count),
+                'detected_count': int(len(detected_objects))
             }
             
         except Exception as e:
